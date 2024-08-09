@@ -1,0 +1,19 @@
+{
+    "name": "express-web-server",
+    "main": "index.js",
+    "scripts": {
+        "1": "node index.js",
+        "2": "node server.js"
+    },
+    "dependencies" : {
+        "connect-history-api-fallback": "^2.0.0",
+        "express": "^4.19.2",
+        "express-sanitizer": "^1.0.6",
+        "g": "^2.0.1",
+        "highlight.js": "^11.9.0",
+        "korean-lunar-calendar": "^0.3.6",
+        "nedb": "^1.8.0",
+        "socket.io": "^4.7.5",
+        "verdaccio": "^5.31.1"
+    }
+}

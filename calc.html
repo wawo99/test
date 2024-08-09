@@ -1,0 +1,552 @@
+    <html>
+    <head></head>
+    <link href="github-dark-dimmed.min.css" rel="stylesheet"/>
+    <link href="./css/dark-calc.css" rel="stylesheet"/>
+    <link href="./css/white-calc.css" rel="stylesheet"/>
+    <style type="text/css" rel="stylesheet">
+        @keyframes blink {
+            0% {
+                color: #38e70e;
+            }
+            30% {
+                color: #5812da;
+            }
+            60% {
+                color: #16c7f3;
+            }
+            80% {
+                color: #ff4c90;
+            }
+            100% {
+                color: #38e70e;
+            }
+        }
+        #todo {
+            display: none;
+            width: 45%;
+            margin-left: 20px;    
+        }
+        #todo input {
+            width: 100%;
+            padding: 3px;
+            outline: none;
+        }
+        #todo textarea {
+            width: 100%;
+            height: 50px;
+            padding: 3px;
+            outline: none;
+        }
+        .todo-box {
+            margin-top: 10px;
+        }
+        .todo-box-header {
+            margin-bottom: 19px;
+        }
+        .todo-box-button {
+            text-align: right;
+        }
+        .badge {
+            font-size: 10px;
+            text-align: right;
+            width: 15px;
+            height: 15px;
+            text-align: center;
+        }
+        .badge-active {
+            background-color: red;
+            border-radius: 50%;
+            color: white;
+        }
+    </style>
+    <body id="dark">
+        <div class="title">who brought coffee<span id="todayBox">? </span><span id="whosCoffee"></span></div>
+        <div style="display:flex">
+            <select id="selectBox"></select>
+            <button type="button" onClick="submit()">확인</button>
+            <button type="button" onClick="toggleTheme()">테마변경</button>
+        </div>
+        <div style="display: flex">
+            <div id="calendarLayout">
+                <div id="calendarInfo"></div>
+                <div id="calendarBox"></div>
+            </div>
+            <div id="todo">
+                <div class="todo-box todo-box-header">
+                    <span id="todo-date"></span> 할일
+                </div>
+                <div class="todo-box">
+                    <textarea id="todo-box-msg"></textarea>
+                </div>
+                <div class="todo-box todo-box-button">
+                    <button type="button" onclick="saveTodo()">확인</button>
+                    <button type="button" onclick="closeTodo()">닫기</button>
+                </div>
+                <div class="todo-box">
+                    <div id="todo-list"></div>
+                </div>
+            </div>
+        </div>
+    </body>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="lodash.js"></script>
+    <script src="korean-lunar-calendar.js"></script>
+    <script src="highlight.min.js"></script>
+    <script>
+        hljs.highlightAll()
+        const socket = io()
+        const calendar = new KoreanLunarCalendar()
+        const calendarForBock = new KoreanLunarCalendar()
+        const eventDay = {
+            lunar: {
+                1230: '설날',
+                "0101": '설날',
+                "0102": '설날',
+                "0814": '추석',
+                "0815": '추석',
+                "0719": '(엄)생일',
+                "0805": '(장)생일'
+            },
+            solar: {
+                '0815': '광복절',
+                1003: '개천절',
+                1009: '한글날',
+                1225: '크리스마스'
+            },
+            solarTerm: {
+                '0204' : '입춘',
+                '0219' : '우수',
+                '0306' : '경칩',
+                '0321' : '춘분',
+                '0405' : '청명',
+                '0420' : '곡우',
+                '0505' : '입하',
+                '0521' : '소만',
+                '0606' : '망종',
+                '0621' : '하지',
+                '0707' : '소서',
+                '0723' : '대서',
+                '0807' : '입추',
+                '0823' : '처서',
+                '0908' : '백로',
+                '0923' : '추분',
+                1008 : '한로',
+                1023 : '상강',
+                1107 : '입동',
+                1122 : '소설',
+                1207 : '대설',
+                1222 : '동지',
+                '0105' : '소한',
+                '0120' : '대한',
+            },
+            solarEvent: {
+                '0726': '(순)휴가',
+            },
+            solarDynamic: {},
+            holiday: {}
+        }
+        const today = new Date()
+        const year = today.getFullYear()
+        const month = `0${today.getMonth() + 1}`.slice(-2)
+        const date = `0${today.getDate()}`.slice(-2)
+        const convertToday = `${year}-${month}-${date}`
+        let checkedListDate
+        let changedDate
+        let isCalc = true
+        const windowTheme = window.matchMedia('(perfers-color-scheme: dark)')
+        const todo = document.getElementById('todo')
+        const todoDate = document.getElementById('todo-date')
+        const todoBoxMsg = document.getElementById('todo-box-msg')
+        const todoList = document.getElementById('todo-list')
+        let db
+        window.load = function(){
+            document.getElementById('todayBox').textContent = convertToday()
+            changeToBarDate()
+            toggleTheme(true)
+        }
+        async function getDateApi(year){
+            const url = `https://cdn.jsdelivr.net/gh/distbe/holidays@gh-pages/${year}.json`
+            eventDay.holiday = {}
+            await fetch(url).then(async res => {
+                const data = await res.json()
+                isCalc = false
+                data.forEach(v=>{
+                    const date = v.date.split('-')
+                    eventDay.holiday[`${date[1]}${date[2]}`] = { name: v.name, holiday: v.holiday }
+                })
+            }).catch(e=>{
+                isCalc = true
+            })
+        }
+
+        function toggleTheme(init = false){
+            const body = document.getElementsByTagName('body')[0]
+            const theme = body.id
+            const themeConfig = {
+                dark: 'white',
+                white: 'dark'
+            }
+            if(init){
+                const themeItem = localStorage.getItem('theme')
+                body.id = themeItem ? themeItem : windowTheme.matches ?'dark':'white'
+            }else{
+                body.id = themeConfig[theme]
+            }
+        }
+        windowTheme.addEventListener('change', e=> {
+            toggleTheme()
+        })
+        function changeTopBarDate(){
+            const selectDay = changeDate ? new Date(changedDate) : new Date()
+            const year = selectDay.getFullYear()
+            const month = `0${selectDay.getMonth() + 1}`.slice(-2)
+            document.getElementById('calendarInfo').innerHTML = `<span class='btn' onclick='perMonth()'>이전</span><span>${year}년 ${month}월</span><span class='btn' onclick='nextMonth()'>다음</span>`
+        }
+        function checkDateList(checkedList){
+            const realName = {
+                W: 'woo',
+                S: 'soon',
+                C: 'coupon'
+            }
+            const opponentName = {
+                W: 'S',S: 'W'
+            }
+            const orderbyCheckedList = _.orderBy(checkedList, ['date'], ['asc'])
+            const filterCheckedObject = orderbyCheckedList.filter(v=> v.name !== 'C').slice(-1)[0]
+            const lastCheckedObject = orderbyCheckedList.slice(-1)[0]
+            const lastBuyerName = filterCheckedObject.name
+            const futureBuyerName = opponentName[lastBuyerName]
+            const isBuy = lastCheckedObject.date === convertedToday
+            const selectBox = document.getElementById('selectBox')
+            selectBox.innerHTML = ''
+            Object.keys(realName).forEach(v=>{
+                const option = document.createElement('option')
+                option.value = v
+                option.id = v
+                option.textContent = realName[v]
+                selectBox.append(option)
+            })
+            function getMessage(){
+                let message
+                const nameToBuy = isBuy ? realName[lastBuyerName] : realName[futureBuyerName]
+                switch(lastCheckedObject.name === 'C' && isBuy){
+                    case true : 
+                        message = '쿠폰으로 결제'
+                        break
+                    default:
+                        message = `${nameToBuy}님이${isBuy ?'결제' : '결제예정'}`
+                }
+                return message
+            }
+    
+        orderbyCheckedList.forEach((v,i)=>{
+            const dateElement = document.createElement('div')
+            const selectDate = document.getElementById(`c-${v.date}`)
+            dateElement.className = `${realName[v.name]} content`
+            let deleteButton = ''
+            if(isBuy && orderbyCheckedList.length - 1 === i){
+                deleteButton = `<button type='button' class='remove' onclick='reomve("${v.date}")'>X</button>`
+            }
+            dateElement.innerHTML = `<span>${realName[v.name]}${deleteButton}</span>`
+            if(selectDate) selectDate.appen(dateElement)
+        })
+        
+        document.getElementById(futureBuyerName ?? '').selected = true
+        document.getElementById('whoseCoffee').textContent = getMessage()
+
+    }
+    function remove(date){
+        socket.emit('checked remove date', {date})
+    }
+    function submit(){
+        const selectBox = document.getElementById('selectBox')
+        socket.emit('checked date', {
+            date: convertedToday,
+            name: selectBox.value
+        })
+    }
+    function getComputedCalendarWidth(){
+        const body = getComputedStyle(document.getElementById('calendarBox'))
+        const width = Number(body.width.replace('px', ''))
+        const dateWidth = Math.floor(width/7)
+        return {width, dateWidth}
+    }
+    async function createCalendar(isChangeYear){
+        const today = chagedDate ? new Date(changedDate) : new Date()
+        const currentYear = today.getFullYear()
+        const currentMonth = today.getMonth()
+        const currentLastDay = new Date(currentYear, currentMonth, 0)
+        const currentToday = currentLastDay.getDate()
+        const preFirstDay = new Date(currentYear, currentMonth - 1, 1)
+        const preLastDay = new Date(currentYear, currentMonth - 1, 0)
+        const preRemainDay = preFirstDay.getDay()
+        const preTotalDay = preLastDay.getDate()
+        const nextLastDay = new Date(currentYear, currentMonth + 1, 0)
+        const totalCellNumber = currentTotalDay + preRemainDay
+        const nextRemainNumber = Math.ceil(totalCellNumber/7) * 7 - totalCellNumber
+        const {width, dateWidth} = getComputedCalendarWidth()
+
+        isChangeYear && (await getDateApi(currentYear))
+
+        function getBockDate(currentDate, bockTypeNum){
+            let gengDays = []
+            const solarDynamic = {}
+            const bockTypeMaxNum = _.max(bockTypeNum)
+            const bockType = {
+                1: '말복',
+                3: '초복',
+                4: '중복',
+            }
+            while(gengDays.length < bockTypeMaxNum) {
+                calendarForBock.setSolarDate(currentYear, currentDate.getMonth() + 1, currentDate.getDate())
+                const gapja = calendarForBock.getKoreanGapja()
+                if(gapja.day.includes('경')){
+                    const gengDayMonthKey = `0${currentDate.getMonth() + 1}`.slice(-2)
+                    const gengDayDateKey = `0${currentDate.getDate()}`.slice(-2)
+                    gengDays.push({gapja: gapja.day, day: `${gengDayMonthKey}${gengDayDateKey}`})
+                    const gngLen = gengDays.length
+                    bockTypeNum.includes(gngLen) && (solarDaynamic[`${gengDayMonthKey}${gengDayDateKey}`] = bockType[gngLen])
+                }
+                currentDate.setDate(currentDate.getDate() + 1)
+            }
+            return solarDynamic
+        }
+        
+        if(isChangeYear){
+            eventDay.solarDynamic = {...getBockDate(new Date(currentYear, 5, 21), [3,4]), ...getBockDate(new Date(currentYear, 7,7), [1])}
+        }
+
+        function createCell(className, {year = '', month = '', date = '', lunarDate = {}}) {
+            const selectDate = new Date(`${year}-${month}-${date}`)
+            const weekOfDay = selectDate.getDay()
+            const weekOfDayObject = {
+                0: ' sunday',
+                6: ' saturday' 
+            }
+            const calendarBox = document.getElementById('calendarBox')
+            const box = document.createElement('div')
+            box.style.width = `${dateWidth}px`
+            box.style.height = `${dateWidth}px`
+            box.className = className
+            box.className += ' c-box'
+            box.className += weekOfDayObject[weekOfDay] ? 'holiday' : ''
+            box.id = `c-${year}-${month}-${date}`
+            const getDateTemplate = (dateData, className, originElement = '') => {
+                const isString = typeof dateData === 'string'
+                const element = isString ? (dateData && `<span class='${className}'>${dateData}</span>`) || originElement : (dateData && `<span class='${dateData.holiday ? "holi-date" : "term-date"}'>${dateData.name}</span>`) || originElement
+                return element
+            }
+
+            const lunarDateElement = lunarDate.month ? `<span class='lunar-date'>(${lunarData.month}/${lunarDate.day})</span>` : ""
+            
+            if(lunarDate.month){
+                lunarDate.month = `0${lunarDate.month}`.slice(-2)
+                lunarDate.day = `0${lunarDate.day}`.slice(-2)
+            }
+
+            const solarDateKey = `${month}${date}`
+            const lunarDateKey = `${lunarDate.month}${lunarDate.day}`
+            const eventDayElement = getDateTemplate(eventDay.solarEvent[solarDateKey], 'event-date')
+            if(isCalc){
+                const termElement = getDateTemplate(eventDay.solarTerm[solarDateKey] || eventDay.solarDynamic[solarDateKey], 'term-date')
+                const holidayElement = getDateTemplate(eventDay.solar[solarDateKey] || eventDay.lunar[lunarDateKey], 'holi-date')
+                box.innerHTML = `<span class='date'><span class='${weekOfDayObject[weekOfDay]}'>${date}</span>${lunarDateElement}${eventDayElement}</span><div>${holidayObjectElement}</div>`
+            }
+            box.innerHTML = `<div class='badge' id='badge-${year}-${month}-${date}'></div>`
+            box.addEventListener('click' , ()=>{
+                const cBox = calendarBox.getElementsByClassName('c-box')
+                for(v of cBox){
+                    v.className = v.className.replace('c-box-active', '')
+                }
+                document.getElementById(box.id).className += ' c-box-active'
+                todoDate.textContent = `${year}-${month}-${date}`
+                todo.style.display = 'block'
+                loadDate(todoDate.textContent, box)
+            })
+
+            calendarBox.append(box)
+        }
+
+        calendarBox.innerHTML = ''
+
+        for(let i =0; i< preRemainDay; i++){
+            createCell('empty-box', {
+                year: preLastDay.getFullYear(),
+                month: `0${preLastDay.getMonth()+1}`.slice(-2),
+                date: `0${preTotalDay - (preRemainDay - i - 1)}`.slice(-2)
+            })
+        }
+        for(let i =0; i< preRemainDay; i++){
+            createCell('empty-box', {
+                year: preLastDay.getFullYear(),
+                month: `0${preLastDay.getMonth()+1}`.slice(-2),
+                date: `0${preTotalDay - (preRemainDay - i - 1)}`.slice(-2)
+            })
+        }
+        for(let i =0; i< currentTotalDay; i++){
+            calendar.setSolarDate(currentYear, currentMonth, i+1)
+            const lunarDate = calendar.getLunarCalendar()
+            createCell('box', {
+                year: currentYear,
+                month: `0${currentMonth}`.slice(-2),
+                date: `0${i + 1}`.slice(-2),
+                lunarDate
+            })
+        }
+        for(let i =0; i< nextRemainNumber; i++){
+            createCell('empty-box', {
+                year: nextLastDay.getFullYear(),
+                month: `0${nextLastDay.getMonth()+1}`.slice(-2),
+                date: `0${i + 1}`.slice(-2)
+            })
+        }
+
+        connectionDB('calendar', 'selectAll', {})
+    }
+
+    function changeDate(n){
+        const dateInfo = changedDate?.split('-') || convertedToday.split('-')
+        const month = dateInfo[1]
+        const checkedDate = new Date(dateInfo[0], Number(dateInfo[1]) - 1 + n)
+        changeDate = `${checkedDate.getFullYear()}-${`0${checkedDate.getMonth() + 1}`.slice(-2)}`
+        changeToBarDate()
+        return Number(dateInfo[0]) !== checkedDate.getFullYear()
+    }
+    async function preMonth(){
+        await createCalendar(changeDate(-1))
+        checkDateList(checkedListData)
+        closeTodo()
+    }
+    async function nextMonth(){
+        await createCalendar(changeDate(1))
+        checkDateList(checkedListData)
+        closeTodo()
+    }
+    socket.emit('checked date list')
+    socket.on('checked date list', async checkedList => {
+        await createCalendar(true)
+        checkedListData = checkedList
+        checkDateList(checkedListData)
+    })
+    window.addEventListener('resize', async function(){
+        await createCalendar()
+        checkDateList(checkedListData)
+    })
+    function closeTodo(){
+        todo.style.display = 'none'
+    }
+    function saveTodo(){
+        const date = todoDate.textContent
+        const msg = todoBoxMsg.value
+        const user = 'test'
+        appendData({date, user, msg})
+        connectionDB('calendar', 'insert', {user, date, msg})
+    }
+    function appendData({key, date, user, msg}){
+        const todoDiv = document.createElement('div')
+        const contents = document.createElement('pre')
+        const codeDiv = document.createElement('code')
+        const button = document.createElement('button')
+        button.textContent = 'X'
+        button.addEventListener('click', ()=>{
+            connectionDB('calendar', 'delete', {key, date})
+        })
+        codeDiv.className = 'code'
+        codeDiv.textContent = msg
+        hljs.highlightElement(codeDiv)
+        contents.appendChild(codeDiv)
+        contents.style.marginLeft = '10px'
+        todoDiv.style.display = 'flex'
+        todoDiv.appendChid(contents)
+        if(key) todoDiv.prepend(button)
+        todoList.prepend(todoDiv)
+    }
+    function loadData(date){
+        todoList.innerHTML = ''
+        connectionDB('calendar', 'select', {date})
+    }
+    function countBadge(date, num) {
+        const badge = document.getElementById(`badge-${date}`)
+        if(badge){
+            const badgeCount = badge.textConten || ''
+            badge.textContent = Number(badgeCount) + num
+            badge.textContent = badge.textContent === '0' ? '' : badge.textContent
+            badge.className = badge.textContent === '' ? 'badge' : 'badge badge-active'
+        }
+    }
+    function connectionDB(storeName, type, calendarData={}){
+        const indexdDB = window.indexedDB
+        if(!indexdDB){
+            alert('do not support')
+            return false
+        }
+        const request = indexdDB.open('calendarDB', 1)
+
+        request.onerror = e => {
+            db = request.result
+            curdData(storeName, type, calendarData)
+        }
+        request.onupgradeneeded = e=>{
+            db = e.target.result
+            const objectStore = db.createObjectStore('calendar', {autoIncrement: true})
+        
+            objectStore.createIndex('user', 'user', {unique: false})
+            objectStore.createIndex('msg', 'msg', {unique: false})
+            objectStore.createIndex('date', 'date', {unique: false})
+        
+            db.onerror = error => {
+                console.log({error})
+            }
+        }
+    }
+    function crudData(storeName, type, calendarData){
+        const dataTransaction = db.transaction(storeName, 'readWrite')
+        const dataStore = dataTransaction.objectStore(storeName)
+        const crud = {
+            insert: function(){
+                countBadge(calendarData.date, 1)
+                dataStore.add({pk:Date.now(), ...calendarData})
+            },
+            selectAll: function(){
+                dataStore.openCursor().onsuccess = res => {
+                    const cursor = res.target.result
+                    if(!cursor) return
+                    const cursorData = { ...cursor.value, key: cursor.primaryKey}
+                    countBadge(cursorData.date, 1)
+                    cursor.continue()
+                }
+            },
+            select: function(){
+                const index = dataStore.index('date')
+                const keyRange = IDBKeyRange.only(calendarData.date)
+                dataStore.openCursor(keyRange).onsuccess = res => {
+                    const cursor = res.target.result
+                    if(!cursor) return
+                    const cursorData = { ...cursor.value, key: cursor.primaryKey}
+                    appendData(cursorData)
+                    cursor.continue()
+                }
+                dataTransaction.oncomplete = () => {}
+            },
+            update: function(){
+                dataStore.openCursor().onsuccess = res => {
+                    const cursor = res.target.result
+                    if(cursor && cursor.key === calendarData.key){
+                        cursor.update({...cursor.value, ...calendarData})
+                        return
+                    }
+                    cursor.continue()
+                }
+            },
+            delete: function(){
+                const request = dataStore.delete(calendarData.key)
+                request.onsuccess = res => {
+                    countBadge(calendarData.date, -1)
+                    loadData(todoDate.textContent)
+                }
+            }
+        }
+        crud[type]()
+    }
+    </script>
+</html>
