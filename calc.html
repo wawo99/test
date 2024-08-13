@@ -149,7 +149,7 @@
         const year = today.getFullYear()
         const month = `0${today.getMonth() + 1}`.slice(-2)
         const date = `0${today.getDate()}`.slice(-2)
-        const convertToday = `${year}-${month}-${date}`
+        const convertedToday = `${year}-${month}-${date}`
         let checkedListDate
         let changedDate
         let isCalc = true
@@ -160,7 +160,7 @@
         const todoList = document.getElementById('todo-list')
         let db
         window.load = function(){
-            document.getElementById('todayBox').textContent = convertToday()
+            document.getElementById('todayBox').textContent = convertToday
             changeToBarDate()
             toggleTheme(true)
         }
@@ -197,7 +197,7 @@
             toggleTheme()
         })
         function changeTopBarDate(){
-            const selectDay = changeDate ? new Date(changedDate) : new Date()
+            const selectDay = changedDate ? new Date(changedDate) : new Date()
             const year = selectDay.getFullYear()
             const month = `0${selectDay.getMonth() + 1}`.slice(-2)
             document.getElementById('calendarInfo').innerHTML = `<span class='btn' onclick='perMonth()'>이전</span><span>${year}년 ${month}월</span><span class='btn' onclick='nextMonth()'>다음</span>`
@@ -276,7 +276,7 @@
         const currentYear = today.getFullYear()
         const currentMonth = today.getMonth()
         const currentLastDay = new Date(currentYear, currentMonth, 0)
-        const currentToday = currentLastDay.getDate()
+        const currentTotalday = currentLastDay.getDate()
         const preFirstDay = new Date(currentYear, currentMonth - 1, 1)
         const preLastDay = new Date(currentYear, currentMonth - 1, 0)
         const preRemainDay = preFirstDay.getDay()
@@ -351,6 +351,10 @@
                 const termElement = getDateTemplate(eventDay.solarTerm[solarDateKey] || eventDay.solarDynamic[solarDateKey], 'term-date')
                 const holidayElement = getDateTemplate(eventDay.solar[solarDateKey] || eventDay.lunar[lunarDateKey], 'holi-date')
                 box.innerHTML = `<span class='date'><span class='${weekOfDayObject[weekOfDay]}'>${date}</span>${lunarDateElement}${eventDayElement}</span><div>${holidayObjectElement}</div>`
+            }else{
+                const holidayObjOriginaElement = getDateTemplate(eventDay.holiday[solarDateKey] || eventDay.solarDynamic[solarDateKey], 'term-date')
+                const holidayElement = getDateTemplate(eventDay.solar[solarDateKey] || eventDay.lunar[lunarDateKey], 'holi-date')
+                box.innerHTML = `<span class='date'><span class='${weekOfDayObject[weekOfDay]}'>${date}</span>${lunarDateElement}${eventDayElement}</span><div>${holidayObjElement}</div>`
             }
             box.innerHTML = `<div class='badge' id='badge-${year}-${month}-${date}'></div>`
             box.addEventListener('click' , ()=>{
@@ -376,13 +380,7 @@
                 date: `0${preTotalDay - (preRemainDay - i - 1)}`.slice(-2)
             })
         }
-        for(let i =0; i< preRemainDay; i++){
-            createCell('empty-box', {
-                year: preLastDay.getFullYear(),
-                month: `0${preLastDay.getMonth()+1}`.slice(-2),
-                date: `0${preTotalDay - (preRemainDay - i - 1)}`.slice(-2)
-            })
-        }
+        
         for(let i =0; i< currentTotalDay; i++){
             calendar.setSolarDate(currentYear, currentMonth, i+1)
             const lunarDate = calendar.getLunarCalendar()
@@ -408,7 +406,7 @@
         const dateInfo = changedDate?.split('-') || convertedToday.split('-')
         const month = dateInfo[1]
         const checkedDate = new Date(dateInfo[0], Number(dateInfo[1]) - 1 + n)
-        changeDate = `${checkedDate.getFullYear()}-${`0${checkedDate.getMonth() + 1}`.slice(-2)}`
+        changedDate = `${checkedDate.getFullYear()}-${`0${checkedDate.getMonth() + 1}`.slice(-2)}`
         changeToBarDate()
         return Number(dateInfo[0]) !== checkedDate.getFullYear()
     }
