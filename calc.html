@@ -305,7 +305,7 @@
                     const gengDayDateKey = `0${currentDate.getDate()}`.slice(-2)
                     gengDays.push({gapja: gapja.day, day: `${gengDayMonthKey}${gengDayDateKey}`})
                     const gngLen = gengDays.length
-                    bockTypeNum.includes(gngLen) && (solarDaynamic[`${gengDayMonthKey}${gengDayDateKey}`] = bockType[gngLen])
+                    bockTypeNum.includes(gngLen) && (solarDynamic[`${gengDayMonthKey}${gengDayDateKey}`] = bockType[gngLen])
                 }
                 currentDate.setDate(currentDate.getDate() + 1)
             }
@@ -329,7 +329,7 @@
             box.style.height = `${dateWidth}px`
             box.className = className
             box.className += ' c-box'
-            box.className += weekOfDayObject[weekOfDay] ? 'holiday' : ''
+            box.className += weekOfDayObject[weekOfDay] ? ' holiday' : ''
             box.id = `c-${year}-${month}-${date}`
             const getDateTemplate = (dateData, className, originElement = '') => {
                 const isString = typeof dateData === 'string'
@@ -350,10 +350,10 @@
             if(isCalc){
                 const termElement = getDateTemplate(eventDay.solarTerm[solarDateKey] || eventDay.solarDynamic[solarDateKey], 'term-date')
                 const holidayElement = getDateTemplate(eventDay.solar[solarDateKey] || eventDay.lunar[lunarDateKey], 'holi-date')
-                box.innerHTML = `<span class='date'><span class='${weekOfDayObject[weekOfDay]}'>${date}</span>${lunarDateElement}${eventDayElement}</span><div>${holidayObjectElement}</div>`
+                box.innerHTML = `<span class='date'><span class='${weekOfDayObject[weekOfDay]}'>${date}</span>${lunarDateElement}${holidayElement}${eventDayElement}${termElement}</span><div>${holidayObjectElement}</div>`
             }else{
-                const holidayObjOriginaElement = getDateTemplate(eventDay.holiday[solarDateKey] || eventDay.solarDynamic[solarDateKey], 'term-date')
-                const holidayElement = getDateTemplate(eventDay.solar[solarDateKey] || eventDay.lunar[lunarDateKey], 'holi-date')
+                const holidayObjOriginElement = getDateTemplate(eventDay.holiday[solarDateKey] || eventDay.solarDynamic[solarDateKey], 'term-date')
+                const holidayObjElement = getDateTemplate(eventDay.lunar[lunarDateKey], 'holi-date', holidayObjOriginElement)
                 box.innerHTML = `<span class='date'><span class='${weekOfDayObject[weekOfDay]}'>${date}</span>${lunarDateElement}${eventDayElement}</span><div>${holidayObjElement}</div>`
             }
             box.innerHTML = `<div class='badge' id='badge-${year}-${month}-${date}'></div>`
@@ -517,7 +517,7 @@
             select: function(){
                 const index = dataStore.index('date')
                 const keyRange = IDBKeyRange.only(calendarData.date)
-                dataStore.openCursor(keyRange).onsuccess = res => {
+                index.openCursor(keyRange).onsuccess = res => {
                     const cursor = res.target.result
                     if(!cursor) return
                     const cursorData = { ...cursor.value, key: cursor.primaryKey}

@@ -3,7 +3,7 @@ const expressSanitizer= require('express-sanitizer')
 const app = express()
 const fs = require('fs')
 const path = require('path')
-const chatPosrt = 5000
+const chatPort = 5000
 
 const options = {
     key : fs.readFileSync('./config/cert.key'),
@@ -16,7 +16,7 @@ const io = require('socket.io')(server)
 const Datastore = require('nedb')
 const db = {}
 
-app.use(express.join())
+app.use(express.json())
 app.use(express.urlencoded({extended:true}))
 app.use(expressSanitizer())
 app.use(express.static(path.join(__dirname, 'public3')))
@@ -107,7 +107,7 @@ function getToday() {
 
 function getTodayChatFile(type) {
     const fileName = `${type}${getToday()}.db`
-    const filtPath = `${__dirname}/data/${fileName}`
+    const filePath = `${__dirname}/data/${fileName}`
     return filePath
 }
 
