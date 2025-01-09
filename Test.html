@@ -5,4 +5,39 @@
       <input type="text" id="dateTest" style="display:block"/>
     </div>
   </body>
+  <style>
+    .ui-datepicker-prev, .ui-datepicker-next {
+      display:noen !mportant;
+    }
+  </style>
+  <script>
+    $(document).ready(function(){
+      const dates = []
+      $("#dateTest").val(dates.toString());
+      $.datepicker.setDefaults({
+        monthNames: ["1월", "2월", "3월", "4월", "5월", "7월", "8월", "9월", "10월", "11월", "12월" ]
+      })
+      $("#dateTest").multiDatesPicker({
+        dateFormat: "yymmdd",
+        numberOfMonths: 12,
+        changeYear: true,
+        onSelect: function(dateText, inst){
+          dates.push(dateText)
+          $(this).datepicker("refresh")
+        },
+        beforeShowDay: function(date){
+          var day = date.getDay()
+          const convertedDate = `${date.getFullYear()}${("0" + (date.getMonth() + 1)).slice(-2)}${("0"+date.getDate()).slice(-2)}`
+          if(day === 0 || day === 6){
+            return false
+          }
+          if(dates.includes(convertedDate)){
+            return [true, "selected", "Selected"]
+          }
+          return [true, "",""]
+        },
+        
+      }).datepicker("show")
+    })
+  </script>
 </html>
