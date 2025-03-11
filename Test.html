@@ -5,6 +5,8 @@
       <input type="text" id="dateTest" style="width:0px,padding:0; margin:0, opacity:0"/>
     </div>
     <div><button type="button" onclick="submit()">확인</button></div>
+
+    <div><input type="text" maxlength="5" class="time"></div>
   </body>
   <style>
     .ui-datepicker-prev, .ui-datepicker-next {
@@ -46,6 +48,18 @@
         },
         
       }).datepicker("show")
+    })
+
+    function chkTyping(value){
+        let chkValue = value.replace(/[^0-9:]/gi, '')
+        chkValue = chkValue.replace(/(\d{2})(\d)/gi, '$1:$2')
+        return chkValue
+    }
+    
+    $().ready(function(){
+        $(document).on('keyup', '.time', function(e){
+            e.target.value = chkTyping(e.target.value)
+        })
     })
   </script>
 </html>
