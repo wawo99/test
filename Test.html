@@ -61,5 +61,16 @@
             e.target.value = chkTyping(e.target.value)
         })
     })
+
+    const data = '[{"test":1},{"test":2},{"test":"sdfsf\nsdfsfsf"}]'
+    const dataToJson = JSON.parse(data.replace(/\n/g,'\\r\\n'))
+    $('#textareatest').val(dataToJson[2].test)
+
+      
+    function testText() {
+        const textData = [{'test': 1}, {'test': 2},{'test': $('#textareatest').val()}]
+        const jsonTextData = JSON.stringify(textData)
+        console.log(jsonTextData)
+    }
   </script>
 </html>
